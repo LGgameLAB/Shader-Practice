@@ -1,0 +1,84 @@
+import sys
+from array import array
+
+import pygame
+import moderngl
+
+pygame.init()
+
+screen = pygame.display.set_mode((800, 600), pygame.OPENGL | pygame.DOUBLEBUF)
+display = pygame.Surface((800, 600))
+ctx = moderngl.create_context()
+
+clock = pygame.time.Clock()
+
+img = pygame.image.load('img.png')
+
+quad_buffer = ctx.buffer(data=array('f', [
+    # position (x, y), uv coords (x, y)
+    -1.0, 1.0, 0.0, 0.0,  # topleft
+    1.0, 1.0, 1.0, 0.0,   # topright
+    -1.0, -1.0, 0.0, 1.0, # bottomleft
+    1.0, -1.0, 1.0, 1.0,  # bottomright
+]))
+
+vert_shader = '''
+#version 330 core
+
+in vec2 vert;
+in vec2 texcoord;
+out vec2 uvs;
+
+void main() {
+    uvs = texcoord;
+    gl_Position = vec4(vert, 0.0, 1.0);
+}
+'''
+
+frag_shader_file = "swizzle.frag"
+frag_shader_passes = {
+        # "exposure": 1,
+        # "bloomStrength": 1.5
+}
+frag_shader = ""
+
+with open(frag_shader_file, "r") as file:
+    frag_shader = file.read()
+
+program = ctx.program(vertex_shader=vert_shader, fragment_shader=frag_shader)
+render_object = ctx.vertex_array(program, [(quad_buffer, '2f 2f', 'vert', 'texcoord')])
+
+def surf_to_texture(surf):
+    tex = ctx.texture(surf.get_size(), 4)
+    tex.filter = (moderngl.NEAREST, moderngl.NEAREST)
+    tex.swizzle = 'BGRA'
+    tex.write(surf.get_view('1'))
+    return tex
+
+t = 0
+
+while True:
+    display.fill((0, 0, 0))
+    display.blit(img, pygame.mouse.get_pos())
+    
+    t += 1
+    
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+    
+    frame_tex = surf_to_texture(display)
+    frame_tex.use(0)
+    program['tex'] = 0
+    program['time'] = t
+    for k,v in frag_shader_passes.items():
+        program[k] = v
+    render_object.render(mode=moderngl.TRIANGLE_STRIP)
+    
+    pygame.display.flip()
+    
+    frame_tex.release()
+    
+    clock.tick(60)
+    
