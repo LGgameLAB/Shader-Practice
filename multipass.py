@@ -24,24 +24,23 @@ quad_buffer = ctx.buffer(data=array('f', [
 
 
 class ShaderPass:
+    vert_shader = '''
+    #version 330 core
+
+    in vec2 vert;
+    in vec2 texcoord;
+    out vec2 uvs;
+
+    void main() {
+        uvs = texcoord;
+        gl_Position = vec4(vert, 0.0, 1.0);
+    }
+    '''
+
     def __init__(self, frag_path="swizzle.frag", vert_path=False):
         if vert_path:
             pass
 
-    
-        self.vert_shader = '''
-        #version 330 core
-
-        in vec2 vert;
-        in vec2 texcoord;
-        out vec2 uvs;
-
-        void main() {
-            uvs = texcoord;
-            gl_Position = vec4(vert, 0.0, 1.0);
-        }
-
-        '''
         frag_shader_passes = {
                 # "exposure": 1,
                 # "bloomStrength": 1.5
@@ -84,13 +83,16 @@ def render_pass(shader_pass, texture):
 
 shaders = [
     ShaderPass("test.frag"),
-    ShaderPass("swizzle.frag")
-    # ShaderPass("test.frag"),
-    # ShaderPass("blank.frag")
+    ShaderPass("swizzle.frag"),
+    ShaderPass("test.frag"),
+    ShaderPass("blank.frag"),
+    ShaderPass("blank.frag"),
 ]
 
-
 render_object = ctx.vertex_array(shaders[0].program, [(quad_buffer, '2f 2f', 'vert', 'texcoord')])
+if len(shaders)%2:
+    shaders.append(ShaderPass("blank.frag"))
+
 while True:
     display.fill((0, 0, 0))
     display.blit(img, pygame.mouse.get_pos())
@@ -122,5 +124,6 @@ while True:
     shaders[-1].render_object.render(mode=moderngl.TRIANGLE_STRIP)
 
     pygame.display.flip()
+    frame_tex.release()
     clock.tick(60)
 
