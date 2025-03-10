@@ -1,13 +1,15 @@
 import sys
 from array import array
 
+from settings import *
+
 import pygame
 import moderngl
 
 pygame.init()
 
-screen = pygame.display.set_mode((800, 600), pygame.OPENGL | pygame.DOUBLEBUF)
-display = pygame.Surface((800, 600))
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.OPENGL | pygame.DOUBLEBUF)
+display = pygame.Surface((WIDTH, HEIGHT))
 ctx = moderngl.create_context()
 
 clock = pygame.time.Clock()
@@ -37,27 +39,24 @@ class ShaderPass:
     }
     '''
 
-    def __init__(self, frag_path="swizzle.frag", vert_path=False):
-        if vert_path:
-            pass
-
-        frag_shader_passes = {
-                # "exposure": 1,
-                # "bloomStrength": 1.5
-        }
-        self.frag_shader = ""
+    def __init__(self, frag_path="swizzle.frag", properties={}):
+        self.properties = properties
 
         with open(frag_path, "r") as file:
             self.frag_shader = file.read()
         
         self.program = ctx.program(vertex_shader=self.vert_shader, fragment_shader=self.frag_shader)
-        self.fbo = ctx.framebuffer(color_attachments=[ctx.texture((800, 600), 4)])
+        self.fbo = ctx.framebuffer(color_attachments=[ctx.texture((WIDTH, HEIGHT), 4)])
         self.render_object = ctx.vertex_array(self.program, [(quad_buffer, '2f 2f', 'vert', 'texcoord')])
 
-
-
     def update(self, t=0):
-        self.program["time"] = t
+        # Load our properties into the shader
+        for k,v in self.properties.items():
+            self.program[k] = v
+
+        # Update time if necessary
+        if "time" in self.properties:
+            self.program["time"] = t
 
 
 def surf_to_texture(surf):
@@ -67,11 +66,6 @@ def surf_to_texture(surf):
     tex.write(surf.get_view('1'))
     return tex
 
-t = 0
-
-# Create framebuffer and texture for rendering passes
-fbo1 = ctx.framebuffer(color_attachments=[ctx.texture((800, 600), 4)])
-fbo2 = ctx.framebuffer(color_attachments=[ctx.texture((800, 600), 4)])
 
 def render_pass(shader_pass, texture):
     """Render a pass using the given framebuffer, input texture, and shader program"""
@@ -81,22 +75,32 @@ def render_pass(shader_pass, texture):
     shader_pass.program['tex'] = 0
     shader_pass.render_object.render(mode=moderngl.TRIANGLE_STRIP)
 
+class Warp(ShaderPass):
+
+    def __init__(self):
+        super().__init__("warp.frag", {"size": 20, "spin": 2,"center": (40, 40)})
+
+    def update(self, t=0):
+        super().update(t)
+        
+        x, y = pygame.mouse.get_pos()
+        self.program["center"].value = (x/WIDTH, y/HEIGHT)
+
 shaders = [
-    ShaderPass("test.frag"),
-    ShaderPass("swizzle.frag"),
-    ShaderPass("test.frag"),
-    ShaderPass("blank.frag"),
-    ShaderPass("blank.frag"),
+    Warp(),
+    ShaderPass("darkness.frag", {"size": 0.5, "center": (0.5, 0.5)})
 ]
 
-render_object = ctx.vertex_array(shaders[0].program, [(quad_buffer, '2f 2f', 'vert', 'texcoord')])
 if len(shaders)%2:
     shaders.append(ShaderPass("blank.frag"))
 
+t = 0
 while True:
     display.fill((0, 0, 0))
-    display.blit(img, pygame.mouse.get_pos())
+    display.blit(img, (0,0))
 
+    x, y = pygame.mouse.get_pos()
+    # pygame.draw.rect(display, (200, 0, 0), (x, y, 40, 40)) 
     t += 1
 
     for event in pygame.event.get():

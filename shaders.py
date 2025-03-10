@@ -37,8 +37,8 @@ void main() {
 
 frag_shader_file = "swizzle.frag"
 frag_shader_passes = {
-        # "exposure": 1,
-        # "bloomStrength": 1.5
+        "exposure": 1,
+        "bloomStrength": 1.5
 }
 frag_shader = ""
 

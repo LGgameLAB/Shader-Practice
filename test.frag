@@ -8,5 +8,5 @@ out vec4 f_color;
 
 void main() {
     vec2 sample_pos = vec2(uvs.x, uvs.y);
-    f_color = vec4(texture(tex, sample_pos).r+100, texture(tex, sample_pos).g, texture(tex, sample_pos).b + time * 0.001, 1.0);
+    f_color = vec4(texture(tex, sample_pos).r, texture(tex, sample_pos).g, texture(tex, sample_pos).b + time * 0.001, 1.0);
 }
