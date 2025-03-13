@@ -1,7 +1,9 @@
 import sys
 from array import array
 
+
 from settings import *
+from tween import Tween
 
 import pygame
 import moderngl
@@ -14,7 +16,7 @@ ctx = moderngl.create_context()
 
 clock = pygame.time.Clock()
 
-img = pygame.image.load('img.png')
+img = pygame.image.load('trump.jpg')
 
 quad_buffer = ctx.buffer(data=array('f', [
     # position (x, y), uv coords (x, y)
@@ -111,6 +113,8 @@ while True:
     # Convert pygame surface to texture
     frame_tex = surf_to_texture(display)
 
+    shaders[0].properties["size"] -= 0.1
+    shaders[0].properties["spin"] += 0.1
     # Update Shaders
     for s in shaders:
         s.update(t)
